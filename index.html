@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Files</title>
+</head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<style>
+    .material-symbols-outlined {
+        font-variation-settings:
+            'FILL' 1,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 48
+    }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        font-weight: 400;
+        padding: 0;
+    }
+
+    h1 {
+        width: 95%;
+        margin: 1rem auto;
+        font-size: 2rem;
+        letter-spacing: 0.0189em;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    th,
+    td {
+        text-align: left;
+        border: 0;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    table th {
+        padding: 0.25rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    table td {
+        padding: 0.5rem 1rem;
+        user-select: none;
+    }
+
+    table td .file-name {
+        display: flex;
+        align-items: center;
+        letter-spacing: 0.0189em;
+
+    }
+
+    table td .file-name .icon {
+        margin-right: 1rem;
+        font-size: 1.33rem;
+    }
+
+    .file {
+        padding: 0.5rem 1rem;
+        cursor: default;
+    }
+
+    .file.file-selected {
+        background-color: #e3f2fd;
+    }
+
+    .icon {
+        color: #bdbdbd;
+    }
+
+    table tr.file-directory .icon {
+        color: #fdd835;
+    }
+
+    .file:hover:not(.file-selected) {
+        background-color: #f5f5f5;
+    }
+
+    .main {
+        width: 95%;
+        margin: 0 auto;
+    }
+
+    .search {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        margin: 0.5rem 0;
+        background: #f5f5f5;
+
+        border-radius: 0.75rem;
+    }
+
+    .search input {
+        flex: 1;
+        background-color: transparent;
+        outline: none;
+        border: 0;
+        padding: 0.75rem 1.75rem;
+        font-size: 1rem;
+    }
+
+    .search span {
+        cursor: pointer;
+        padding: 0.75rem 1.75rem;
+        color: #000;
+    }
+
+    .paths {
+        display: flex;
+        align-items: center;
+    }
+
+    .paths .path {
+        font-size: 0.95rem;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        color: #9e9e9e;
+        cursor: pointer;
+    }
+
+    .paths .path:hover {
+        background-color: #eeeeee;
+    }
+
+    .paths .icon {
+        color: #9e9e9e;
+        font-size: 1rem;
+    }
+</style>
+
+<body>
+    <h1 id="title">Files</h1>
+    <div class="main">
+        <div id="paths" class="paths">
+            <div class="path">home</div>
+            <span class="icon material-symbols-outlined">
+                chevron_right
+            </span>
+            <div class="path">user</div>
+            <span class="icon material-symbols-outlined">
+                chevron_right
+            </span>
+            <div class="path">rust</div>
+        </div>
+        <div class="search">
+            <input id="search" type="text" placeholder="Search" />
+            <span id="search-button" class="material-symbols-outlined">search</span>
+        </div>
+        <table class="files">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Size</th>
+                </tr>
+            </thead>
+            <tbody id="files"></tbody>
+        </table>
+    </div>
+
+    <script>
+        class MaterialIcon {
+            constructor(name) {
+                this.name = name;
+            }
+
+            render() {
+                const span = document.createElement("span");
+                span.classList.add("material-symbols-outlined");
+                span.classList.add("icon");
+                span.innerHTML = this.name;
+                return span;
+            }
+        }
+
+        class HtmlSpan {
+            constructor(text) {
+                this.text = text;
+            }
+
+            render() {
+                const span = document.createElement("span");
+                span.innerHTML = this.text;
+                return span;
+            }
+        }
+
+        class FileMetadata {
+            constructor(o) {
+                this.o = o;
+            }
+
+            get id() { return this.o.id; }
+
+            get name() { return this.o.name; }
+
+            get kind() { return this.o.kind; }
+
+            get mime() { return this.o.mime; }
+
+            get iconName() {
+                if (this.kind === "Directory")
+                    return "folder";
+                if (-1 < this.mime.indexOf("image/"))
+                    return "image";
+                return "draft";
+            }
+
+            get icon() { return new MaterialIcon(this.iconName); }
+
+            get isDirectory() { return this.kind === "Directory"; }
+
+            get isFile() { return !this.isDirectory; }
+
+            get size() { return this.o.size; }
+
+            get path() {
+                let r = this.o.path;
+                if (r instanceof Array)
+                    return r;
+                return [];
+            }
+
+            render() {
+                const tr = document.createElement("tr");
+                tr.className = "file";
+                if (this.isDirectory)
+                    tr.classList.add("file-directory");
+                const td = document.createElement("td");
+                const div = document.createElement("div");
+                div.className = "file-name";
+                div.appendChild(this.icon.render());
+                div.appendChild(new HtmlSpan(this.name).render());
+                td.appendChild(div);
+                tr.appendChild(td);
+                const tdSize = document.createElement("td");
+                if (this.isFile)
+                    tdSize.innerHTML = Utils.humanFileSize(this.size);
+                tr.appendChild(tdSize);
+                if (this._onClick)
+                    tr.addEventListener("click", () => this._onClick(tr));
+                if (this._onDblClick)
+                    tr.addEventListener("dblclick", () => this._onDblClick(tr));
+                return tr;
+            }
+
+            onClick(callback) {
+                this._onClick = callback;
+            }
+
+            onDblClick(callback) {
+                this._onDblClick = callback;
+            }
+
+            async getData() {
+                if (this.isDirectory)
+                    throw new Error("File is directory");
+                let result = await fetch("files/" + this.name);
+                if (!result.ok)
+                    throw new Error("Cannot load files");
+                return result.blob();
+            }
+        }
+
+        class Client {
+            constructor() {
+            }
+
+            async getFiles(path) {
+                try {
+                    const url = "files" + (path ? "/" + path + "/files" : "");
+                    const result = await fetch(url);
+                    if (!result.ok)
+                        throw new Error("Cannot load files");
+                    const json = await result.json();
+                    return json["files"] ? json["files"].map(o => new FileMetadata(o)) : [];
+                }
+                catch (e) {
+                    console.error(e);
+                }
+            }
+
+            async search(path, query) {
+                try {
+                    let url = "search" + (path ? "/" + path : "");
+                    if (query)
+                        url += "?query=" + encodeURIComponent(query);
+                    const result = await fetch(url);
+                    if (!result.ok)
+                        throw new Error("Cannot load files");
+                    const json = await result.json();
+                    return json["files"] ? json["files"].map(o => new FileMetadata(o)) : [];
+                }
+                catch (e) {
+                    console.error(e);
+                }
+            }
+
+            async getFileMetadata(id) {
+                try {
+                    const url = "files/" + id + "/metadata";
+                    const result = await fetch(url);
+                    if (!result.ok)
+                        throw new Error("Cannot load files");
+                    const json = await result.json();
+                    return new FileMetadata(json);
+                }
+                catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        class Utils {
+            static humanFileSize(bytes, si = false, dp = 1) {
+                const thresh = si ? 1000 : 1024;
+                if (Math.abs(bytes) < thresh)
+                    return bytes + ' B';
+                const units = si
+                    ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+                    : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+                let u = -1;
+                const r = 10 ** dp;
+                do {
+                    bytes /= thresh;
+                    ++u;
+                } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+                return bytes.toFixed(dp) + ' ' + units[u];
+            }
+
+            static openBlob(name, blob) {
+                let url = window.URL.createObjectURL(blob);
+                let a = document.createElement("a");
+                document.body.appendChild(a);
+                a.style = "display: none";
+                a.href = url;
+                a.setAttribute("download", name);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+        }
+
+
+        //
+        // Load compoments into HTML
+        //
+
+        const client = new Client();
+        var selectedId = "";
+
+        function loadTable(files) {
+            const filesDiv = document.getElementById("files");
+            filesDiv.innerHTML = "";
+            for (const file of files) {
+                file.onClick((e) => {
+                    for (const child of filesDiv.childNodes)
+                        child.classList.remove("file-selected");
+                    e.classList.add("file-selected");
+                });
+                file.onDblClick(async (e) => {
+                    try {
+                        if (file.isDirectory) {
+                            window.location.hash = "id=" + file.id;
+                            setTitle(file.name);
+                        }
+                        else {
+                            const data = await file.getData();
+                            Utils.openBlob(file.name, data);
+                        }
+                    }
+                    catch (e) {
+                        console.error(e);
+                    }
+                });
+                filesDiv.appendChild(file.render());
+            }
+        }
+
+        function loadPath(value) {
+            const el = document.getElementById("paths");
+            el.innerHTML = "";
+            if (value && value.length)
+                for (let i = 0, size = value.length; i < size; i++) {
+                    const path = document.createElement("div");
+                    path.innerHTML = value[i];
+                    path.className = "path";
+                    el.appendChild(path);
+                    if (i < size - 1) {
+                        const separator = document.createElement("span");
+                        separator.innerHTML = "chevron_right";
+                        separator.className = "icon material-symbols-outlined";
+                        el.appendChild(separator);
+                    }
+                }
+        }
+
+        async function loadMetadata() {
+            try {
+                if (selectedId) {
+                    const file = await client.getFileMetadata(selectedId);
+                    setTitle(file.name);
+                    let path = file.path.slice();
+                    path.unshift(" / ");
+                    loadPath(path);
+                }
+                else {
+                    setTitle("Files");
+                    loadPath([" / "]);
+                }
+            } catch (e) {
+                console.error(e);
+                setTitle("File not found");
+            }
+        }
+
+        async function load(id) {
+            try {
+                const files = await client.getFiles(id);
+                loadTable(files);
+                loadMetadata();
+            }
+            catch (e) {
+                console.error(e);
+                setTitle("File not found");
+            }
+        }
+
+        function setTitle(value) {
+            document.getElementById("title").innerHTML = value;
+        }
+
+        async function search(id) {
+            try {
+                const query = document.getElementById("search").value;
+                if (query) {
+                    const files = await client.search(id, query);
+                    loadTable(files);
+                    loadMetadata();
+                }
+                else {
+                    load(id);
+                }
+            }
+            catch (e) {
+                console.error(e);
+                setTitle("File not found");
+            }
+        }
+
+        window.addEventListener("load", () => {
+            window.location.hash = "";
+            document.getElementById("search").addEventListener("keyup", (e) => {
+                if (e.code == "Enter")
+                    search(selectedId);
+            });
+            document.getElementById("search-button").addEventListener("click", (e) => {
+                search(selectedId);
+            });
+            load();
+        });
+        window.addEventListener("hashchange", (e) => {
+            const url = e.newURL;
+            const arr = url.split("#");
+            if (1 < arr.length) {
+                const hash = arr[1];
+                const idArray = hash.split("=");
+                if (idArray.length) {
+                    selectedId = idArray[1];
+                    this.load(selectedId);
+                    return;
+                }
+            }
+            this.load();
+        });
+    </script>
+
+</body>
+
+</html>
